@@ -1,0 +1,13 @@
+name: measure_performance
+description: collects memory and duration elapsed of any operation for measuring performance
+version: 1.0.0
+repository: https://github.com/predatorx7/dart_measure_performance
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.24.0
