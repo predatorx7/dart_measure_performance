@@ -6,6 +6,12 @@ import 'dart:io';
 /// This class provides various memory usage statistics and timing information
 /// for a measured code block.
 class PerformanceReport {
+  /// The date and time when the measurement started.
+  final DateTime measurementStartedAt;
+
+  /// The date and time when the measurement stopped.
+  final DateTime measurementStoppedAt;
+
   /// The total elapsed time of the measurement.
   final Duration elapsed;
 
@@ -19,6 +25,8 @@ class PerformanceReport {
   final List<int> memoryUsageBytes;
 
   const PerformanceReport({
+    required this.measurementStartedAt,
+    required this.measurementStoppedAt,
     required this.elapsed,
     required this.memoryUsageBeforeMeasurementBytes,
     required this.memoryUsageAfterMeasurementBytes,
@@ -58,6 +66,8 @@ class PerformanceReport {
   /// Converts the performance report to a JSON-compatible map.
   Map<String, Object?> toJson() {
     return {
+      'measurementStartedAt': measurementStartedAt.toIso8601String(),
+      'measurementStoppedAt': measurementStoppedAt.toIso8601String(),
       'elapsed': elapsed.inMicroseconds,
       'memoryUsageBeforeMeasurementBytes': memoryUsageBeforeMeasurementBytes,
       'memoryUsageAfterMeasurementBytes': memoryUsageAfterMeasurementBytes,
@@ -67,7 +77,7 @@ class PerformanceReport {
 
   @override
   String toString() {
-    return 'PerformanceReport(elapsed: $elapsed, memoryUsageBeforeMeasurementBytes: $memoryUsageBeforeMeasurementBytes, memoryUsageAfterMeasurementBytes: $memoryUsageAfterMeasurementBytes, maxMemoryUsageBytes: $maxMemoryUsageBytes, minMemoryUsageBytes: $minMemoryUsageBytes, averageMemoryUsageBytes: $averageMemoryUsageBytes, memoryUsageBytes: $memoryUsageBytes)';
+    return 'PerformanceReport(measurementStartedAt: $measurementStartedAt, measurementStoppedAt: $measurementStoppedAt, elapsed: $elapsed, memoryUsageBeforeMeasurementBytes: $memoryUsageBeforeMeasurementBytes, memoryUsageAfterMeasurementBytes: $memoryUsageAfterMeasurementBytes, maxMemoryUsageBytes: $maxMemoryUsageBytes, minMemoryUsageBytes: $minMemoryUsageBytes, averageMemoryUsageBytes: $averageMemoryUsageBytes, memoryUsageBytes: $memoryUsageBytes)';
   }
 }
 
@@ -106,6 +116,8 @@ class MeasurePerformance {
 
   int _memoryUsageBeforeStartBytes = 0;
   int _memoryUsageAfterStartBytes = 0;
+  DateTime _measurementStartedAt = DateTime.now();
+  DateTime _measurementStoppedAt = DateTime.now();
 
   /// Starts the performance measurement by collecting various metrics like
   /// memory usage, elapsed time, etc.
@@ -118,6 +130,7 @@ class MeasurePerformance {
       throw StateError('Measurement already started');
     }
     reset();
+    _measurementStartedAt = DateTime.now();
     _stopwatch.start();
     _memoryUsageBeforeStartBytes = getMemoryUsageInBytes();
     _snapshotTimer = Timer.periodic(samplingFrequency, _collectMemoryUsage);
@@ -146,6 +159,7 @@ class MeasurePerformance {
     _snapshotTimer = null;
     _stopwatch.stop();
     _memoryUsageAfterStartBytes = getMemoryUsageInBytes();
+    _measurementStoppedAt = DateTime.now();
   }
 
   /// Resets the performance measurement.
@@ -160,6 +174,8 @@ class MeasurePerformance {
     _memoryUsageBytes.clear();
     _memoryUsageBeforeStartBytes = 0;
     _memoryUsageAfterStartBytes = 0;
+    _measurementStartedAt = DateTime.now();
+    _measurementStoppedAt = DateTime.now();
   }
 
   /// Returns a [PerformanceReport] containing all collected metrics.
@@ -167,8 +183,7 @@ class MeasurePerformance {
     final List<int> measuredMemoryUsageBytes;
     if (_memoryUsageBytes.isEmpty) {
       // if no memory usage samples were collected, return the initial and final memory usage. Memory usage samples may be empty when measured for a short or synchronous operation.
-      if (_memoryUsageBeforeStartBytes != 0 ||
-          _memoryUsageAfterStartBytes != 0) {
+      if (_memoryUsageBeforeStartBytes != 0 || _memoryUsageAfterStartBytes != 0) {
         measuredMemoryUsageBytes = [
           _memoryUsageBeforeStartBytes,
           _memoryUsageAfterStartBytes,
@@ -184,6 +199,8 @@ class MeasurePerformance {
       memoryUsageBeforeMeasurementBytes: _memoryUsageBeforeStartBytes,
       memoryUsageAfterMeasurementBytes: _memoryUsageAfterStartBytes,
       memoryUsageBytes: List.unmodifiable(measuredMemoryUsageBytes),
+      measurementStartedAt: _measurementStartedAt,
+      measurementStoppedAt: _measurementStoppedAt,
     );
   }
 
