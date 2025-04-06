@@ -1,36 +1,42 @@
 import 'dart:async';
 import 'dart:io';
 
+typedef PerformanceReportToJsonMapConverter = Map<String, Object?> Function(PerformanceReport);
+
 /// A report containing performance metrics for a code execution.
 ///
 /// This class provides various memory usage statistics and timing information
 /// for a measured code block.
 class PerformanceReport {
   /// The date and time when the measurement started.
-  final DateTime measurementStartedAt;
+  final DateTime startedAt;
 
   /// The date and time when the measurement stopped.
-  final DateTime measurementStoppedAt;
+  final DateTime stoppedAt;
 
   /// The total elapsed time of the measurement.
   final Duration elapsed;
 
   /// Memory usage in bytes before the measurement started.
-  final int memoryUsageBeforeMeasurementBytes;
+  final int memoryUsageBeforeStartBytes;
 
   /// Memory usage in bytes after the measurement ended.
-  final int memoryUsageAfterMeasurementBytes;
+  final int memoryUsageAfterStoppedBytes;
 
   /// List of memory usage samples in bytes taken during the measurement.
   final List<int> memoryUsageBytes;
 
+  /// A function that converts the performance report to a JSON-compatible map.
+  final PerformanceReportToJsonMapConverter? toJsonMapConverter;
+
   const PerformanceReport({
-    required this.measurementStartedAt,
-    required this.measurementStoppedAt,
+    required this.startedAt,
+    required this.stoppedAt,
     required this.elapsed,
-    required this.memoryUsageBeforeMeasurementBytes,
-    required this.memoryUsageAfterMeasurementBytes,
+    required this.memoryUsageBeforeStartBytes,
+    required this.memoryUsageAfterStoppedBytes,
     required this.memoryUsageBytes,
+    this.toJsonMapConverter,
   });
 
   /// Converts the size in bytes to megabytes.
@@ -65,19 +71,23 @@ class PerformanceReport {
 
   /// Converts the performance report to a JSON-compatible map.
   Map<String, Object?> toJson() {
+    final toJsonMapConverter = this.toJsonMapConverter;
+    if (toJsonMapConverter != null) {
+      return toJsonMapConverter(this);
+    }
     return {
-      'measurementStartedAt': measurementStartedAt.toIso8601String(),
-      'measurementStoppedAt': measurementStoppedAt.toIso8601String(),
+      'started_at': startedAt.toIso8601String(),
+      'stopped_at': stoppedAt.toIso8601String(),
       'elapsed': elapsed.inMicroseconds,
-      'memoryUsageBeforeMeasurementBytes': memoryUsageBeforeMeasurementBytes,
-      'memoryUsageAfterMeasurementBytes': memoryUsageAfterMeasurementBytes,
-      'memoryUsageBytes': memoryUsageBytes,
+      'memory_usage_before_start_bytes': memoryUsageBeforeStartBytes,
+      'memory_usage_after_stop_bytes': memoryUsageAfterStoppedBytes,
+      'memory_usage_bytes': memoryUsageBytes,
     };
   }
 
   @override
   String toString() {
-    return 'PerformanceReport(measurementStartedAt: $measurementStartedAt, measurementStoppedAt: $measurementStoppedAt, elapsed: $elapsed, memoryUsageBeforeMeasurementBytes: $memoryUsageBeforeMeasurementBytes, memoryUsageAfterMeasurementBytes: $memoryUsageAfterMeasurementBytes, maxMemoryUsageBytes: $maxMemoryUsageBytes, minMemoryUsageBytes: $minMemoryUsageBytes, averageMemoryUsageBytes: $averageMemoryUsageBytes, memoryUsageBytes: $memoryUsageBytes)';
+    return 'PerformanceReport(startedAt: $startedAt, stoppedAt: $stoppedAt, elapsed: $elapsed, memoryUsageBeforeStartBytes: $memoryUsageBeforeStartBytes, memoryUsageAfterStoppedBytes: $memoryUsageAfterStoppedBytes, maxMemoryUsageBytes: $maxMemoryUsageBytes, minMemoryUsageBytes: $minMemoryUsageBytes, averageMemoryUsageBytes: $averageMemoryUsageBytes, memoryUsageBytes: $memoryUsageBytes)';
   }
 }
 
@@ -91,6 +101,7 @@ class MeasurePerformance {
   final List<int> _memoryUsageBytes;
   final Duration samplingFrequency;
   Timer? _snapshotTimer;
+  final PerformanceReportToJsonMapConverter? toJsonMapConverter;
 
   /// Creates a new performance measurement instance.
   ///
@@ -98,6 +109,7 @@ class MeasurePerformance {
   /// Default is every 10 milliseconds.
   MeasurePerformance({
     this.samplingFrequency = const Duration(milliseconds: 10),
+    this.toJsonMapConverter,
   })  : _stopwatch = Stopwatch(),
         _memoryUsageBytes = [];
 
@@ -196,11 +208,12 @@ class MeasurePerformance {
     }
     return PerformanceReport(
       elapsed: _stopwatch.elapsed,
-      memoryUsageBeforeMeasurementBytes: _memoryUsageBeforeStartBytes,
-      memoryUsageAfterMeasurementBytes: _memoryUsageAfterStartBytes,
+      memoryUsageBeforeStartBytes: _memoryUsageBeforeStartBytes,
+      memoryUsageAfterStoppedBytes: _memoryUsageAfterStartBytes,
       memoryUsageBytes: List.unmodifiable(measuredMemoryUsageBytes),
-      measurementStartedAt: _measurementStartedAt,
-      measurementStoppedAt: _measurementStoppedAt,
+      startedAt: _measurementStartedAt,
+      stoppedAt: _measurementStoppedAt,
+      toJsonMapConverter: toJsonMapConverter,
     );
   }
 

@@ -36,7 +36,7 @@ void main() {
       final report = measure.getReport();
 
       expect(report.elapsed.inMilliseconds, greaterThanOrEqualTo(100));
-      expect(report.measurementStoppedAt.isAfter(report.measurementStartedAt), isTrue);
+      expect(report.stoppedAt.isAfter(report.startedAt), isTrue);
     });
 
     test('should collect memory usage samples', () async {
@@ -48,9 +48,9 @@ void main() {
       final report = measure.getReport();
 
       expect(report.memoryUsageBytes, hasLength(greaterThanOrEqualTo(2)));
-      expect(report.memoryUsageBeforeMeasurementBytes, greaterThan(0));
-      expect(report.memoryUsageAfterMeasurementBytes, greaterThan(0));
-      expect(report.measurementStoppedAt.isAfter(report.measurementStartedAt), isTrue);
+      expect(report.memoryUsageBeforeStartBytes, greaterThan(0));
+      expect(report.memoryUsageAfterStoppedBytes, greaterThan(0));
+      expect(report.stoppedAt.isAfter(report.startedAt), isTrue);
       // Prevent the list from being optimized away
       expect(list.length, 1000000);
     });
@@ -73,7 +73,7 @@ void main() {
           lessThanOrEqualTo(report.maxMemoryUsageBytes),
         ]),
       );
-      expect(report.measurementStoppedAt.isAfter(report.measurementStartedAt), isTrue);
+      expect(report.stoppedAt.isAfter(report.startedAt), isTrue);
       // Prevent lists from being optimized away
       expect(list1.length + list2.length, 3000000);
     });
@@ -93,9 +93,9 @@ void main() {
       final secondReport = measure.getReport();
 
       expect(firstReport.elapsed, greaterThan(Duration.zero));
-      expect(secondReport.measurementStartedAt.isAfter(firstReport.measurementStoppedAt), isTrue);
+      expect(secondReport.startedAt.isAfter(firstReport.stoppedAt), isTrue);
       expect(secondReport.elapsed, greaterThan(Duration.zero));
-      expect(secondReport.measurementStoppedAt.isAfter(secondReport.measurementStartedAt), isTrue);
+      expect(secondReport.stoppedAt.isAfter(secondReport.startedAt), isTrue);
     });
 
     test('should reset all measurements', () {
@@ -104,10 +104,10 @@ void main() {
       measure.reset();
       final report = measure.getReport();
       expect(report.memoryUsageBytes, isEmpty);
-      expect(report.memoryUsageBeforeMeasurementBytes, 0);
-      expect(report.memoryUsageAfterMeasurementBytes, 0);
-      expect(report.measurementStartedAt, isNotNull);
-      expect(report.measurementStoppedAt, isNotNull);
+      expect(report.memoryUsageBeforeStartBytes, 0);
+      expect(report.memoryUsageAfterStoppedBytes, 0);
+      expect(report.startedAt, isNotNull);
+      expect(report.stoppedAt, isNotNull);
     });
 
     test('should handle empty measurement period', () {
@@ -115,10 +115,10 @@ void main() {
       measure.stop();
       final report = measure.getReport();
       expect(report.memoryUsageBytes, hasLength(greaterThanOrEqualTo(2)));
-      expect(report.memoryUsageBeforeMeasurementBytes, greaterThan(0));
-      expect(report.memoryUsageAfterMeasurementBytes, greaterThan(0));
+      expect(report.memoryUsageBeforeStartBytes, greaterThan(0));
+      expect(report.memoryUsageAfterStoppedBytes, greaterThan(0));
       expect(report.elapsed, greaterThan(Duration.zero));
-      expect(report.measurementStoppedAt.isAfter(report.measurementStartedAt), isTrue);
+      expect(report.stoppedAt.isAfter(report.startedAt), isTrue);
     });
 
     test('should convert to JSON correctly', () {
@@ -128,14 +128,14 @@ void main() {
       final json = report.toJson();
 
       expect(json['elapsed'], isA<int>());
-      expect(json['memoryUsageBeforeMeasurementBytes'], isA<int>());
-      expect(json['memoryUsageAfterMeasurementBytes'], isA<int>());
-      expect(json['memoryUsageBytes'], isA<List<int>>());
-      expect(json['measurementStartedAt'], isA<String>());
-      expect(json['measurementStoppedAt'], isA<String>());
+      expect(json['memory_usage_before_start_bytes'], isA<int>());
+      expect(json['memory_usage_after_stop_bytes'], isA<int>());
+      expect(json['memory_usage_bytes'], isA<List<int>>());
+      expect(json['started_at'], isA<String>());
+      expect(json['stopped_at'], isA<String>());
       expect(
-          DateTime.parse(json['measurementStoppedAt'] as String)
-              .isAfter(DateTime.parse(json['measurementStartedAt'] as String)),
+          DateTime.parse(json['stopped_at'] as String)
+              .isAfter(DateTime.parse(json['started_at'] as String)),
           isTrue);
     });
 
@@ -150,82 +150,213 @@ void main() {
   group('PerformanceReport', () {
     test('should convert to JSON with all fields', () {
       final report = PerformanceReport(
-        measurementStartedAt: DateTime(2024, 1, 1, 12, 0),
-        measurementStoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+        startedAt: DateTime(2024, 1, 1, 12, 0),
+        stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
         elapsed: const Duration(seconds: 1),
-        memoryUsageBeforeMeasurementBytes: 1000,
-        memoryUsageAfterMeasurementBytes: 2000,
+        memoryUsageBeforeStartBytes: 1000,
+        memoryUsageAfterStoppedBytes: 2000,
         memoryUsageBytes: [1000, 1500, 2000],
       );
 
       final json = report.toJson();
 
-      expect(json['measurementStartedAt'], '2024-01-01T12:00:00.000');
-      expect(json['measurementStoppedAt'], '2024-01-01T12:00:01.000');
+      expect(json['started_at'], '2024-01-01T12:00:00.000');
+      expect(json['stopped_at'], '2024-01-01T12:00:01.000');
       expect(json['elapsed'], 1000000); // 1 second in microseconds
-      expect(json['memoryUsageBeforeMeasurementBytes'], 1000);
-      expect(json['memoryUsageAfterMeasurementBytes'], 2000);
-      expect(json['memoryUsageBytes'], [1000, 1500, 2000]);
+      expect(json['memory_usage_before_start_bytes'], 1000);
+      expect(json['memory_usage_after_stop_bytes'], 2000);
+      expect(json['memory_usage_bytes'], [1000, 1500, 2000]);
     });
 
     test('should convert to JSON with empty memory samples', () {
       final report = PerformanceReport(
-        measurementStartedAt: DateTime(2024, 1, 1, 12, 0),
-        measurementStoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+        startedAt: DateTime(2024, 1, 1, 12, 0),
+        stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
         elapsed: const Duration(seconds: 1),
-        memoryUsageBeforeMeasurementBytes: 1000,
-        memoryUsageAfterMeasurementBytes: 2000,
+        memoryUsageBeforeStartBytes: 1000,
+        memoryUsageAfterStoppedBytes: 2000,
         memoryUsageBytes: const [],
       );
 
       final json = report.toJson();
 
-      expect(json['measurementStartedAt'], '2024-01-01T12:00:00.000');
-      expect(json['measurementStoppedAt'], '2024-01-01T12:00:01.000');
+      expect(json['started_at'], '2024-01-01T12:00:00.000');
+      expect(json['stopped_at'], '2024-01-01T12:00:01.000');
       expect(json['elapsed'], 1000000);
-      expect(json['memoryUsageBeforeMeasurementBytes'], 1000);
-      expect(json['memoryUsageAfterMeasurementBytes'], 2000);
-      expect(json['memoryUsageBytes'], isEmpty);
+      expect(json['memory_usage_before_start_bytes'], 1000);
+      expect(json['memory_usage_after_stop_bytes'], 2000);
+      expect(json['memory_usage_bytes'], isEmpty);
     });
 
     test('should convert to JSON with single memory sample', () {
       final report = PerformanceReport(
-        measurementStartedAt: DateTime(2024, 1, 1, 12, 0),
-        measurementStoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+        startedAt: DateTime(2024, 1, 1, 12, 0),
+        stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
         elapsed: const Duration(seconds: 1),
-        memoryUsageBeforeMeasurementBytes: 1000,
-        memoryUsageAfterMeasurementBytes: 2000,
+        memoryUsageBeforeStartBytes: 1000,
+        memoryUsageAfterStoppedBytes: 2000,
         memoryUsageBytes: [1500],
       );
 
       final json = report.toJson();
 
-      expect(json['measurementStartedAt'], '2024-01-01T12:00:00.000');
-      expect(json['measurementStoppedAt'], '2024-01-01T12:00:01.000');
+      expect(json['started_at'], '2024-01-01T12:00:00.000');
+      expect(json['stopped_at'], '2024-01-01T12:00:01.000');
       expect(json['elapsed'], 1000000);
-      expect(json['memoryUsageBeforeMeasurementBytes'], 1000);
-      expect(json['memoryUsageAfterMeasurementBytes'], 2000);
-      expect(json['memoryUsageBytes'], [1500]);
+      expect(json['memory_usage_before_start_bytes'], 1000);
+      expect(json['memory_usage_after_stop_bytes'], 2000);
+      expect(json['memory_usage_bytes'], [1500]);
     });
 
     test('should convert to JSON with zero values', () {
       final report = PerformanceReport(
-        measurementStartedAt: DateTime(2024, 1, 1, 12, 0),
-        measurementStoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+        startedAt: DateTime(2024, 1, 1, 12, 0),
+        stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
         elapsed: Duration.zero,
-        memoryUsageBeforeMeasurementBytes: 0,
-        memoryUsageAfterMeasurementBytes: 0,
+        memoryUsageBeforeStartBytes: 0,
+        memoryUsageAfterStoppedBytes: 0,
         memoryUsageBytes: const [],
       );
 
       final json = report.toJson();
 
-      expect(json['measurementStartedAt'], '2024-01-01T12:00:00.000');
-      expect(json['measurementStoppedAt'], '2024-01-01T12:00:01.000');
+      expect(json['started_at'], '2024-01-01T12:00:00.000');
+      expect(json['stopped_at'], '2024-01-01T12:00:01.000');
       expect(json['elapsed'], 0);
-      expect(json['memoryUsageBeforeMeasurementBytes'], 0);
-      expect(json['memoryUsageAfterMeasurementBytes'], 0);
-      expect(json['memoryUsageBytes'], isEmpty);
+      expect(json['memory_usage_before_start_bytes'], 0);
+      expect(json['memory_usage_after_stop_bytes'], 0);
+      expect(json['memory_usage_bytes'], isEmpty);
+    });
+
+    group('toJsonMapConverter', () {
+      test('should use default converter when no custom converter is provided', () {
+        final report = PerformanceReport(
+          startedAt: DateTime(2024, 1, 1, 12, 0),
+          stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+          elapsed: const Duration(seconds: 1),
+          memoryUsageBeforeStartBytes: 1000,
+          memoryUsageAfterStoppedBytes: 2000,
+          memoryUsageBytes: [1000, 1500, 2000],
+        );
+
+        final json = report.toJson();
+
+        expect(json['started_at'], '2024-01-01T12:00:00.000');
+        expect(json['stopped_at'], '2024-01-01T12:00:01.000');
+        expect(json['elapsed'], 1000000);
+        expect(json['memory_usage_before_start_bytes'], 1000);
+        expect(json['memory_usage_after_stop_bytes'], 2000);
+        expect(json['memory_usage_bytes'], [1000, 1500, 2000]);
+      });
+
+      test('should use custom converter when provided', () {
+        customConverter(PerformanceReport report) => {
+              'custom_start': report.startedAt.toIso8601String(),
+              'custom_stop': report.stoppedAt.toIso8601String(),
+              'custom_elapsed': report.elapsed.inMilliseconds,
+              'custom_memory': {
+                'before': report.memoryUsageBeforeStartBytes,
+                'after': report.memoryUsageAfterStoppedBytes,
+                'samples': report.memoryUsageBytes,
+              },
+            };
+
+        final report = PerformanceReport(
+          startedAt: DateTime(2024, 1, 1, 12, 0),
+          stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+          elapsed: const Duration(seconds: 1),
+          memoryUsageBeforeStartBytes: 1000,
+          memoryUsageAfterStoppedBytes: 2000,
+          memoryUsageBytes: [1000, 1500, 2000],
+          toJsonMapConverter: customConverter,
+        );
+
+        final json = report.toJson();
+        final memory = json['custom_memory'] as Map<String, dynamic>;
+
+        expect(json['custom_start'], '2024-01-01T12:00:00.000');
+        expect(json['custom_stop'], '2024-01-01T12:00:01.000');
+        expect(json['custom_elapsed'], 1000);
+        expect(memory['before'], 1000);
+        expect(memory['after'], 2000);
+        expect(memory['samples'], [1000, 1500, 2000]);
+      });
+
+      test('should handle custom converter with minimal fields', () {
+        minimalConverter(PerformanceReport report) => {
+              'elapsed_ms': report.elapsed.inMilliseconds,
+            };
+
+        final report = PerformanceReport(
+          startedAt: DateTime(2024, 1, 1, 12, 0),
+          stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+          elapsed: const Duration(seconds: 1),
+          memoryUsageBeforeStartBytes: 1000,
+          memoryUsageAfterStoppedBytes: 2000,
+          memoryUsageBytes: [1000, 1500, 2000],
+          toJsonMapConverter: minimalConverter,
+        );
+
+        final json = report.toJson();
+
+        expect(json.length, 1);
+        expect(json['elapsed_ms'], 1000);
+      });
+
+      test('should handle custom converter with transformed data', () {
+        transformedConverter(PerformanceReport report) => {
+              'duration': '${report.elapsed.inMilliseconds}ms',
+              'memory': {
+                'before': '${PerformanceReport.bytesToMb(report.memoryUsageBeforeStartBytes)}MB',
+                'after': '${PerformanceReport.bytesToMb(report.memoryUsageAfterStoppedBytes)}MB',
+                'max': '${PerformanceReport.bytesToMb(report.maxMemoryUsageBytes)}MB',
+              },
+            };
+
+        final report = PerformanceReport(
+          startedAt: DateTime(2024, 1, 1, 12, 0),
+          stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+          elapsed: const Duration(seconds: 1),
+          memoryUsageBeforeStartBytes: 1000000, // 1MB
+          memoryUsageAfterStoppedBytes: 2000000, // 2MB
+          memoryUsageBytes: [1000000, 1500000, 2000000],
+          toJsonMapConverter: transformedConverter,
+        );
+
+        final json = report.toJson();
+        final memory = json['memory'] as Map<String, dynamic>;
+
+        expect(json['duration'], '1000ms');
+        expect(memory['before'], '1.0MB');
+        expect(memory['after'], '2.0MB');
+        expect(memory['max'], '2.0MB');
+      });
+
+      test('should handle custom converter with null values', () {
+        nullableConverter(PerformanceReport report) => {
+              'started_at': report.startedAt.toIso8601String(),
+              'stopped_at': report.stoppedAt.toIso8601String(),
+              'elapsed': report.elapsed.inMicroseconds,
+              'memory': null,
+            };
+
+        final report = PerformanceReport(
+          startedAt: DateTime(2024, 1, 1, 12, 0),
+          stoppedAt: DateTime(2024, 1, 1, 12, 0, 1),
+          elapsed: const Duration(seconds: 1),
+          memoryUsageBeforeStartBytes: 1000,
+          memoryUsageAfterStoppedBytes: 2000,
+          memoryUsageBytes: [1000, 1500, 2000],
+          toJsonMapConverter: nullableConverter,
+        );
+
+        final json = report.toJson();
+
+        expect(json['started_at'], '2024-01-01T12:00:00.000');
+        expect(json['stopped_at'], '2024-01-01T12:00:01.000');
+        expect(json['elapsed'], 1000000);
+        expect(json['memory'], isNull);
+      });
     });
   });
 }

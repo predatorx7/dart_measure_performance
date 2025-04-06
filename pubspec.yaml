@@ -1,6 +1,6 @@
 name: measure_performance
 description: Measure various performance metrics like memory usage and duration elapsed of an operation
-version: 1.1.0
+version: 1.2.0
 repository: https://github.com/predatorx7/dart_measure_performance
 topics:
   - performance
