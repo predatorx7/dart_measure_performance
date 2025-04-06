@@ -69,6 +69,35 @@ class PerformanceReport {
     return (total / memoryUsageBytes.length).round();
   }
 
+  /// Returns a new [PerformanceReport] with the specified properties.
+  ///
+  /// This method creates a new instance of [PerformanceReport] with the same
+  /// properties as the current instance, but allows for overriding specific
+  /// properties.
+  ///
+  /// [toJsonMapConverter] can be provided to customize the JSON conversion.
+  /// If [removeToJsonMapConverter] is true, the custom converter will be removed.
+  PerformanceReport copyWith({
+    DateTime? startedAt,
+    DateTime? stoppedAt,
+    Duration? elapsed,
+    int? memoryUsageBeforeStartBytes,
+    int? memoryUsageAfterStoppedBytes,
+    List<int>? memoryUsageBytes,
+    PerformanceReportToJsonMapConverter? toJsonMapConverter,
+    bool removeToJsonMapConverter = false,
+  }) {
+    return PerformanceReport(
+      startedAt: startedAt ?? this.startedAt,
+      stoppedAt: stoppedAt ?? this.stoppedAt,
+      elapsed: elapsed ?? this.elapsed,
+      memoryUsageBeforeStartBytes: memoryUsageBeforeStartBytes ?? this.memoryUsageBeforeStartBytes,
+      memoryUsageAfterStoppedBytes: memoryUsageAfterStoppedBytes ?? this.memoryUsageAfterStoppedBytes,
+      memoryUsageBytes: memoryUsageBytes ?? this.memoryUsageBytes,
+      toJsonMapConverter: removeToJsonMapConverter ? null : (toJsonMapConverter ?? this.toJsonMapConverter),
+    );
+  }
+
   /// Converts the performance report to a JSON-compatible map.
   Map<String, Object?> toJson() {
     final toJsonMapConverter = this.toJsonMapConverter;

@@ -134,8 +134,7 @@ void main() {
       expect(json['started_at'], isA<String>());
       expect(json['stopped_at'], isA<String>());
       expect(
-          DateTime.parse(json['stopped_at'] as String)
-              .isAfter(DateTime.parse(json['started_at'] as String)),
+          DateTime.parse(json['stopped_at'] as String).isAfter(DateTime.parse(json['started_at'] as String)),
           isTrue);
     });
 
